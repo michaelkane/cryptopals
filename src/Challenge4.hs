@@ -6,8 +6,7 @@ import qualified Challenge3
 main :: IO ()
 main = do
   contents <- readFile "challenge-data/4.txt"
-  putStrLn . show . Challenge3.topSolution $ map (Challenge3.topSolution . Challenge3.generateSolutions . Helpers.hexToBytes) (lines contents)
+  putStrLn . show . Challenge3.topSolution $
+    foldr (\line solutions -> ((Challenge3.generateSolutions . Helpers.hexToBytes $ line) ++ solutions)) [] (lines contents)
 
-
-answer :: String
-answer = "TODO"
+-- obviously this is not very efficient
