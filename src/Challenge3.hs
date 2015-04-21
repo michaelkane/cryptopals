@@ -19,22 +19,23 @@ decrypt :: ByteString -> Word8 -> ByteString
 decrypt ciphertext key = B.map (Bits.xor key) ciphertext
 
 -- [(plaintext, key)]
-allSolutions :: [(ByteString, Word8)]
-allSolutions = [(decrypt input k, k) | k <- keys]
+generateSolutions :: ByteString -> [(ByteString, Word8)]
+generateSolutions ciphertext = [(decrypt ciphertext k, k) | k <- keys]
 
--- [(plaintext, key, score)]
-scoredSolutions :: [(ByteString, Word8, Rational)]
-scoredSolutions = map (\x -> (fst x, snd x, Helpers.englishness (fst x))) allSolutions
+-- [((plaintext, key), score)]
+scoreSolutions :: [(ByteString, Word8)] -> [((ByteString, Word8), Rational)]
+scoreSolutions solutions = map (\x -> (x, Helpers.englishness (fst x))) solutions
 
--- (plaintext, key, score)
-topSolution :: (ByteString, Word8, Rational)
-topSolution = List.maximumBy cmp scoredSolutions
-  where cmp = \x y -> Ord.compare (third x) (third y)
-        third = \(_,_,x) -> x
+-- (plaintext, key)
+topSolution :: [(ByteString, Word8)] -> (ByteString, Word8)
+topSolution solutions = fst $ head sortedScoredSolutions
+  where
+    sortedScoredSolutions = List.sortBy cmp (scoreSolutions solutions)
+    cmp = \x y -> Ord.compare (snd x) (snd y)
 
 answer :: String
 answer = "Cyphertext: " ++ show (Helpers.bytesToHex input) ++ "\n" ++
-         "Plaintext: " ++ show (first topSolution) ++ "\n" ++
-         "Key: " ++ show (B.pack [second topSolution])
-  where first = \(x,_,_) -> x
-        second = \(_,x,_) -> x
+         "Plaintext: " ++ show (fst solution) ++ "\n" ++
+         "Key: " ++ show (B.pack [snd solution])
+  where
+    solution = topSolution . generateSolutions $ input
