@@ -50,5 +50,7 @@ characterFrequency c s
   | otherwise = fromIntegral (BC.count c s) / fromIntegral (BC.length s)
 
 englishness :: ByteString -> Rational
-englishness s = sum $ map freqDiff englishCharacters
-  where freqDiff c = abs (characterFrequency c s - englishCharacterFrequency c)
+englishness s = 1 / summedDiff
+  where
+    freqDiff c = abs (characterFrequency c s - englishCharacterFrequency c)
+    summedDiff = sum $ map freqDiff englishCharacters

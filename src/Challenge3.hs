@@ -28,9 +28,9 @@ scoreSolutions solutions = map (\x -> (x, Helpers.englishness (fst x))) solution
 
 -- (plaintext, key)
 topSolution :: [(ByteString, Word8)] -> (ByteString, Word8)
-topSolution solutions = fst $ head sortedScoredSolutions
+topSolution solutions = fst topScoredSolution
   where
-    sortedScoredSolutions = List.sortBy cmp (scoreSolutions solutions)
+    topScoredSolution = List.maximumBy cmp (scoreSolutions solutions)
     cmp = \x y -> Ord.compare (snd x) (snd y)
 
 answer :: String
