@@ -23,8 +23,8 @@ blockify blockSize bytes
     (firstBlock, rest) = B.splitAt blockSizeI bytes
 
 -- keySizeScore :: Int -> ByteString -> Double
--- keySizeScore keySize cipher = normalizedScore where
---   blocks = blockify keySize cipher
+-- keySizeScore keySize ciphertext = normalizedScore where
+--   blocks = blockify keySize ciphertext
 --   firstBlock = head blocks
 --   secondBlock = head . tail $ blocks
 --   hammingScore = hammingDistance firstBlock secondBlock
@@ -36,40 +36,42 @@ blockify blockSize bytes
 -- out keySizeScore above.)  Instead I got the correct result by computing the
 -- normalized hamming distance between ALL consecutive blocks and averaging.
 
+-- Apply a binary function between consecutive elements of a list and return a
+-- list of all the outputs.
 joinWith :: (a -> a -> b) -> [a] -> [b]
 joinWith _ [] = []
 joinWith _ [_] = []
-joinWith f (x1:x2:xs) = f x1 x2 : joinWith f xs
+joinWith f (x1:x2:xs) = f x1 x2 : joinWith f (x2:xs)
 
 keySizeScore :: Int -> ByteString -> Double
-keySizeScore keySize cipher = sum normalizedScores / fromIntegral (length blocks) where
-  blocks = blockify keySize cipher
+keySizeScore keySize ciphertext = sum normalizedScores / fromIntegral (length blocks) where
+  blocks = blockify keySize ciphertext
   normalizedScores = joinWith (\a b -> fromIntegral (hammingDistance a b) / fromIntegral keySize) blocks
 
 rankKeySizes :: [Int] -> ByteString -> [Int]
-rankKeySizes keySizes cipher = map fst $ sortBy sortFn scoredKeySizes where
-  scoredKeySizes = map (\size -> (size, keySizeScore size cipher)) keySizes
+rankKeySizes keySizes ciphertext = map fst $ sortBy sortFn scoredKeySizes where
+  scoredKeySizes = map (\size -> (size, keySizeScore size ciphertext)) keySizes
   sortFn = \a b -> compare (snd a) (snd b)
 
 solveSingleByteXor :: ByteString -> Word8
-solveSingleByteXor cipher = fst $ maximumBy sortFn scoredSolutions where
+solveSingleByteXor ciphertext = fst $ maximumBy sortFn scoredSolutions where
   possibleKeys = [0..255] :: [Word8]
-  decryptWith key = B.map (Bits.xor key) cipher
+  decryptWith key = B.map (Bits.xor key) ciphertext
   score = Helpers.englishness . B.toStrict . decryptWith
   scoredSolutions = [(key, score key) | key <- possibleKeys]
   sortFn = \a b -> compare (snd a) (snd b)
 
 decrypt :: ByteString -> ByteString -> ByteString
-decrypt key cipher = B.pack $ B.zipWith (Bits.xor) repeatedKey cipher
+decrypt key ciphertext = B.pack $ B.zipWith (Bits.xor) repeatedKey ciphertext
   where repeatedKey = B.concat $ repeat key
 
 main :: IO ()
 main = do
-  cipherB64 <- BC.readFile "challenge-data/6.txt"
-  let cipher = Base64.decodeLenient cipherB64
-  let keySize = head $ rankKeySizes [2..40] cipher
-  let blocks = blockify keySize cipher
+  ciphertextB64 <- BC.readFile "challenge-data/6.txt"
+  let ciphertext = Base64.decodeLenient ciphertextB64
+  let keySize = head $ rankKeySizes [2..40] ciphertext
+  let blocks = blockify keySize ciphertext
   let transposedBlocks = B.transpose blocks
   let solution = B.pack $ map solveSingleByteXor transposedBlocks
-  BC.putStrLn $ decrypt solution cipher
+  BC.putStrLn $ decrypt solution ciphertext
   putStrLn $ "(Decrypted with key: " ++ show solution ++ ")"
