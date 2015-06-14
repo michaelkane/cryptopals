@@ -7,7 +7,8 @@ module Main where
 -- import qualified Challenge5
 -- import qualified Challenge6
 -- import qualified Challenge7
-import qualified Challenge8
+-- import qualified Challenge8
+import qualified Challenge9
 
 main :: IO()
-main = Challenge8.main
+main = Challenge9.main

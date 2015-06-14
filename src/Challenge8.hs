@@ -22,7 +22,7 @@ decodeLenientB16 = BC.fromStrict . fst . Base16.decode . BC.toStrict
 totalHammingDistance :: [ByteString] -> Int
 totalHammingDistance blocks = sum $ map (\(b1, b2) -> hammingDistance b1 b2) blockCombinations
   where
-    blockCombinations = [(b1, b2) | b1 <- blocks, b2 <- blocks] -- ah.. ??
+    blockCombinations = [(b1, b2) | b1 <- blocks, b2 <- blocks] -- ah.. should exclude permutations (x,y) (y,x)
 
 averageHammingDistance :: [ByteString] -> Double
 averageHammingDistance blocks = fromIntegral (totalHammingDistance blocks) / fromIntegral (length blocks)
