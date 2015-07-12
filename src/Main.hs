@@ -1,14 +1,15 @@
 module Main where
 
--- import qualified Challenge1
--- import qualified Challenge2
--- import qualified Challenge3
--- import qualified Challenge4
--- import qualified Challenge5
--- import qualified Challenge6
--- import qualified Challenge7
--- import qualified Challenge8
-import qualified Challenge9
+-- import qualified Challenge1 as Challenge
+-- import qualified Challenge2 as Challenge
+-- import qualified Challenge3 as Challenge
+-- import qualified Challenge4 as Challenge
+-- import qualified Challenge5 as Challenge
+-- import qualified Challenge6 as Challenge
+-- import qualified Challenge7 as Challenge
+-- import qualified Challenge8 as Challenge
+-- import qualified Challenge9 as Challenge
+import qualified Challenge10 as Challenge
 
 main :: IO()
-main = Challenge9.main
+main = Challenge.main

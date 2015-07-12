@@ -27,6 +27,8 @@ executable cryptopals
                        base64-bytestring,
                        optparse-applicative,
                        cipher-aes128,
-                       crypto-api
+                       crypto-api,
+                       pipes,
+                       pipes-bytestring
   hs-source-dirs:      src
   default-language:    Haskell2010
