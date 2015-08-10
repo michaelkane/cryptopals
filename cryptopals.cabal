@@ -29,6 +29,7 @@ executable cryptopals
                        cipher-aes128,
                        crypto-api,
                        pipes,
-                       pipes-bytestring
+                       pipes-bytestring,
+                       lens
   hs-source-dirs:      src
   default-language:    Haskell2010

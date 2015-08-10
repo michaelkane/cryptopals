@@ -21,56 +21,74 @@ module Challenge10 where
 -- The file here is intelligible (somewhat) when CBC decrypted against "YELLOW
 -- SUBMARINE" with an IV of all ASCII 0 (\x00\x00\x00 &c)
 
-import Data.Word (Word8)
+import Pipes
+import qualified Pipes.ByteString as PB
+
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
-import qualified Data.Bits as Bits
-import Crypto.Cipher.AES128 (AESKey128)
-import Crypto.Classes (buildKey, encryptBlock, zeroIV, IV)
+import qualified Data.ByteString.Char8 as BC
 
-pad :: Int -> ByteString -> ByteString
-pad blockSize bs = B.append bs padding
+import Data.Word (Word8)
+import qualified Data.Bits as Bits
+
+import Crypto.Cipher.AES128 (AESKey128)
+import qualified Crypto.Cipher.AES128 as AES128
+
+
+pkcs7 :: Int -> ByteString -> ByteString
+pkcs7 blockSize bs = B.append bs padding
   where
     paddingLength = mod blockSize (B.length bs)
     paddingByte = fromIntegral paddingLength :: Word8
     padding = B.replicate paddingLength (paddingByte)
 
--- Pads the last block using PKCS#7 if less than blockSize
-blockify :: Int -> ByteString -> [ByteString]
-blockify blockSize bytes
-  | B.length firstBlock < blockSizeI = [pad blockSize firstBlock]
-  | otherwise = firstBlock : blockify blockSize rest
-  where
-    blockSizeI = fromIntegral blockSize
-    (firstBlock, rest) = B.splitAt blockSizeI bytes
-
 xor :: ByteString -> ByteString -> ByteString
-xor = (B.pack .) . (B.zipWith Bits.xor)
+xor a b = B.pack $ B.zipWith (Bits.xor) a b
 
--- aes128BlockCipher :: ByteString -> ByteString -> ByteString
--- aes128BlockCipher key plaintext = undefined
---   where Just aes128Key = buildKey 
 
-encryptAES128Cbc :: AESKey128 -> ByteString -> ByteString -> ByteString
-encryptAES128Cbc key iv plaintext = undefined
+-- Assumes the given 'previous' block is already padded to blockSize (i.e. make
+-- sure the IV is blockSize!)
+cbcEncrypt :: (Monad m) =>
+              Int ->
+              (ByteString -> ByteString) ->
+              ByteString ->
+              Pipe ByteString ByteString m r
+cbcEncrypt blockSize encryptFn iv = do
+  plainBlock <- await
+  let paddedPlainBlock = pkcs7 blockSize plainBlock
+  let xoredBlock = xor iv paddedPlainBlock
+  let cipherBlock = encryptFn xoredBlock
+  yield cipherBlock
+  cbcEncrypt blockSize encryptFn cipherBlock
 
+
+cbcDecrypt :: (Monad m) =>
+              Int ->
+              (ByteString -> ByteString) ->
+              ByteString ->
+              Pipe ByteString ByteString m r
+cbcDecrypt blockSize decryptFn iv = do
+  cipherBlock <- await
+  let xoredBlock = decryptFn cipherBlock
+  let plainBlock = xor iv xoredBlock
+  yield plainBlock
+  cbcDecrypt blockSize decryptFn cipherBlock
+
+-- e.g. cat challenge-data/10.txt | base64 -d | ./dist/build/cryptopals/cryptopals
+-- Switch between encrypting and decrypting in the code
 main :: IO ()
-main = do
-  let Just key = buildKey "YELLOW SUBMARINE" :: Maybe AESKey128
-  let iv = zeroIV :: IV AESKey128
-  let plaintext = "I'd love you to encrypt me!"
-  print ("hi" :: String)
-  --print $ encryptAES128Cbc key iv plaintext
+main =
+  let
+    blockSize = 16 -- (AES blocksize == 128 bits == 16 bytes)
+    Just key = AES128.buildKey "YELLOW SUBMARINE" :: Maybe AESKey128
+    -- encryptor = AES128.encryptBlock key
+    decryptor = AES128.decryptBlock key
+    iv = BC.replicate blockSize '0'
+  in
+    runEffect $
+      (PB.chunksOf' blockSize PB.stdin) >->
+      cbcDecrypt blockSize decryptor iv >->
+      PB.stdout
 
-
--- import qualified Data.ByteString.Lazy.Char8 as BC
--- import qualified Data.ByteString.Base64.Lazy as Base64
--- import Crypto.Cipher.AES128 (AESKey128)
--- import Crypto.Classes (buildKey, unEcbLazy)
-
--- main :: IO ()
--- main = do
---   ciphertextB64 <- BC.readFile "challenge-data/7.txt"
---   let ciphertext = Base64.decodeLenient ciphertextB64
---   let Just key = buildKey "YELLOW SUBMARINE" :: Maybe AESKey128
---   BC.putStrLn $ unEcbLazy key ciphertext
+-- Todo: make a proper cmdline program (accept a key / iv / encrpyt - decrypt).
+-- Todo: make a pipe which splits into blockSize chunks and does padding at end.
